@@ -47,7 +47,41 @@ let sample = ForAll("x", Implies(
     Exists("z", And(
         Predicate("sert", ["y"; "z"]),
         Predicate("aime", ["x"; "z"])))))
-let _ =
-    print_endline ("expression:\t"^latex_of_fole sample);
-    print_endline ("negation:\t"^(latex_of_fole (negate sample)));
-    print_endline ("no_implies:\t"^(latex_of_fole (remove_implies sample)))
+
+
+type clause = Clause of fole * fole (* Predicate, expr *)
+let print_clauses clauses = let f = (function Clause(p, b) ->
+    Printf.printf "%s <- %s\n" (latex_of_fole p) (latex_of_fole b)) in
+    ignore (List.map f clauses)
+let next = function (* TODO increment the trailing number if any *)
+| Clause(Predicate(x, _), _) :: _ -> x^"'"
+| _::_ -> "ERROR" (* FIXME *)
+| [] -> "Tmp"
+
+module SS = Set.Make(String)
+let order s = List.sort (fun x y -> if x<y then -1 else 1) (SS.elements s)
+let rec datalog_of_fole current clauses = function
+(* current contains the free variables at the current level *)
+(* returned: expression, updated clauses, inner parameters *)
+| Predicate(_, a) as p -> p, clauses, SS.of_list a
+| ForAll(v, e) -> datalog_of_fole SS.empty clauses (Not(Exists(v, Not(e))))
+| Implies(p, q) -> datalog_of_fole SS.empty clauses (Or(Not(p), q))
+| Not(p) ->
+    let b, clauses, inner_fr = datalog_of_fole SS.empty clauses p in
+    Not(b), clauses, inner_fr
+| Exists(v, i) ->
+    let b, clauses, inner_fr = datalog_of_fole SS.empty clauses i in
+    let params = SS.remove v inner_fr in
+    let p = Predicate(next clauses, order params) in
+    p, Clause(p, b)::clauses, params
+| Or(p, q) -> (* TODO create new clauses *)
+    (* TODO implement this *)
+    p, [], SS.empty
+| And(p, q) ->
+    (* TODO implement this *)
+    p, [], SS.empty;;
+
+let trivial = ForAll("x", Predicate("lt", ["x"; "x"])) in
+let b, c, _ = datalog_of_fole SS.empty [] trivial in
+print_clauses c;
+print_endline (latex_of_fole b)
