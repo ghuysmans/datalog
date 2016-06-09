@@ -67,14 +67,12 @@ let rec datalog_of_fole clauses = function
     Not(b), clauses, inner_fr
 | Exists(v, i) ->
     let b, clauses, inner_fr = datalog_of_fole clauses i in
-    let n = next clauses in
     let inner_fr = (SS.diff inner_fr (SS.singleton v)) in
-    let p = Predicate(n, order inner_fr) in
+    let p = Predicate(next clauses, order inner_fr) in
     p, Clause(p, b)::clauses, inner_fr
 | Or(p, q) ->
     let p2, clauses, inner_fr = datalog_of_fole clauses p in
     let q2, clauses, inner_fr2 = datalog_of_fole clauses q in
-    let n = next clauses in
     let params = SS.union inner_fr inner_fr2 in
     let s = Predicate(next clauses, order params) in
     let clauses = Clause(s, p2)::clauses in
