@@ -42,12 +42,6 @@ let rec remove_implies = function
 | Not(p) -> Not(remove_implies p)
 | Predicate(_, _) as p -> p;;
 
-let sample = ForAll("x", Implies(
-    Predicate("frequente", ["x"; "y"]),
-    Exists("z", And(
-        Predicate("sert", ["y"; "z"]),
-        Predicate("aime", ["x"; "z"])))))
-
 
 type clause = Clause of fole * fole (* Predicate, expr *)
 let print_clauses clauses = let f = (function Clause(p, b) ->
@@ -60,28 +54,40 @@ let next = function (* TODO increment the trailing number if any *)
 
 module SS = Set.Make(String)
 let order s = List.sort (fun x y -> if x<y then -1 else 1) (SS.elements s)
-let rec datalog_of_fole current clauses = function
-(* current contains the free variables at the current level *)
+let rec datalog_of_fole clauses = function
 (* returned: expression, updated clauses, inner parameters *)
 | Predicate(_, a) as p -> p, clauses, SS.of_list a
-| ForAll(v, e) -> datalog_of_fole SS.empty clauses (Not(Exists(v, Not(e))))
-| Implies(p, q) -> datalog_of_fole SS.empty clauses (Or(Not(p), q))
+| ForAll(v, e) -> datalog_of_fole clauses (Not(Exists(v, Not(e))))
+| Implies(p, q) -> datalog_of_fole clauses (Or(Not(p), q))
+| Not(And(p, q)) -> datalog_of_fole clauses (Or(Not(p), Not(q)))
+| Not(Or(p, q)) -> datalog_of_fole clauses (And(Not(p), Not(q)))
 | Not(p) ->
-    let b, clauses, inner_fr = datalog_of_fole SS.empty clauses p in
+    let b, clauses, inner_fr = datalog_of_fole clauses p in
     Not(b), clauses, inner_fr
 | Exists(v, i) ->
-    let b, clauses, inner_fr = datalog_of_fole SS.empty clauses i in
-    let params = SS.remove v inner_fr in
-    let p = Predicate(next clauses, order params) in
-    p, Clause(p, b)::clauses, params
-| Or(p, q) -> (* TODO create new clauses *)
-    (* TODO implement this *)
-    p, [], SS.empty
+    let b, clauses, inner_fr = datalog_of_fole clauses i in
+    let n = next clauses in
+    let inner_fr = (SS.diff inner_fr (SS.singleton v)) in
+    let p = Predicate(n, order inner_fr) in
+    p, Clause(p, b)::clauses, inner_fr
+| Or(p, q) -> (* TODO create separate clauses *)
+    let p2, clauses, inner_fr = datalog_of_fole clauses p in
+    let q2, clauses, inner_fr2 = datalog_of_fole clauses q in
+    Or(p2, q2), clauses, SS.union inner_fr inner_fr2
 | And(p, q) ->
-    (* TODO implement this *)
-    p, [], SS.empty;;
+    let p2, clauses, inner_fr = datalog_of_fole clauses p in
+    let q2, clauses, inner_fr2 = datalog_of_fole clauses q in
+    And(p2, q2), clauses, SS.union inner_fr inner_fr2;;
 
-let trivial = ForAll("x", Predicate("lt", ["x"; "x"])) in
-let b, c, _ = datalog_of_fole SS.empty [] trivial in
-print_clauses c;
-print_endline (latex_of_fole b)
+
+let test formula =
+    let b, c, _ = datalog_of_fole [] formula in
+    print_endline (latex_of_fole formula);
+    print_newline ();
+    print_clauses c;
+    print_endline (latex_of_fole b);;
+
+let trivial = And(Predicate("z", []), Exists("x", And(
+    Predicate("a", ["x"]),
+    Exists("y", Predicate("b", ["x"; "y"]))))) in
+    test trivial;
