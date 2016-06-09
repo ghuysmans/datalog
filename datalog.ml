@@ -71,10 +71,15 @@ let rec datalog_of_fole clauses = function
     let inner_fr = (SS.diff inner_fr (SS.singleton v)) in
     let p = Predicate(n, order inner_fr) in
     p, Clause(p, b)::clauses, inner_fr
-| Or(p, q) -> (* TODO create separate clauses *)
+| Or(p, q) ->
     let p2, clauses, inner_fr = datalog_of_fole clauses p in
     let q2, clauses, inner_fr2 = datalog_of_fole clauses q in
-    Or(p2, q2), clauses, SS.union inner_fr inner_fr2
+    let n = next clauses in
+    let params = SS.union inner_fr inner_fr2 in
+    let s = Predicate(next clauses, order params) in
+    let clauses = Clause(s, p2)::clauses in
+    let clauses = Clause(s, q2)::clauses in
+    s, clauses, params
 | And(p, q) ->
     let p2, clauses, inner_fr = datalog_of_fole clauses p in
     let q2, clauses, inner_fr2 = datalog_of_fole clauses q in
@@ -96,4 +101,7 @@ let trivial = And(Predicate("z", []), Exists("x", And(
 let exam140530q11 = ForAll("x", Implies(
     Predicate("F", ["x"; "y"]), Exists("z",
     And(Predicate("S", ["y"; "z"]), Predicate("A", ["x"; "z"]))))) in
-    test exam140530q11
+    test exam140530q11;;
+
+let trivial_or = Or(Predicate("p", []), Predicate("q", ["x"])) in
+    test trivial_or
