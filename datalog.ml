@@ -82,13 +82,18 @@ let rec datalog_of_fole clauses = function
 
 
 let test formula =
+    print_endline ("* "^(latex_of_fole formula));
     let b, c, _ = datalog_of_fole [] formula in
-    print_endline (latex_of_fole formula);
-    print_newline ();
     print_clauses c;
-    print_endline (latex_of_fole b);;
+    print_endline (latex_of_fole b);
+    print_newline ();;
 
 let trivial = And(Predicate("z", []), Exists("x", And(
     Predicate("a", ["x"]),
     Exists("y", Predicate("b", ["x"; "y"]))))) in
-    test trivial;
+    test trivial;;
+
+let exam140530q11 = ForAll("x", Implies(
+    Predicate("F", ["x"; "y"]), Exists("z",
+    And(Predicate("S", ["y"; "z"]), Predicate("A", ["x"; "z"]))))) in
+    test exam140530q11
