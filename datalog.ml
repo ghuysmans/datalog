@@ -59,6 +59,7 @@ let rec datalog_of_fole clauses = function
 | Predicate(_, a) as p -> p, clauses, SS.of_list a
 | ForAll(v, e) -> datalog_of_fole clauses (Not(Exists(v, Not(e))))
 | Implies(p, q) -> datalog_of_fole clauses (Or(Not(p), q))
+| Not(Implies(p, q)) -> datalog_of_fole clauses (And(p, Not(q)))
 | Not(And(p, q)) -> datalog_of_fole clauses (Or(Not(p), Not(q)))
 | Not(Or(p, q)) -> datalog_of_fole clauses (And(Not(p), Not(q)))
 | Not(p) ->
